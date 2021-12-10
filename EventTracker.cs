@@ -76,7 +76,9 @@ namespace CalendarReminder
                         if((utcNow - lastMetaLoad[i]).Ticks >= TimeSpan.TicksPerMinute*5)
                         {
                             CalendarListEntry calendar = await Service.CalendarList.Get(calendarIds[i]).ExecuteAsync(cancelToken).ConfigureAwait(false);
-                            defaultMinutes[i] = calendar.DefaultReminders.Aggregate(int.MaxValue, (min, e) => Math.Min(min, e.Minutes ?? int.MaxValue));
+                            defaultMinutes[i] = calendar.DefaultReminders == null ? -1 :
+                                calendar.DefaultReminders.Where(r => r.Method == "popup")
+                                    .Aggregate(-1, (min, e) => Math.Max(min, e.Minutes ?? -1));
                             lastMetaLoad[i] = utcNow;
                         }
 
@@ -100,7 +102,7 @@ namespace CalendarReminder
                             if(page.Items.Count != 0) maybeChanged = true;
                             foreach(Event e in page.Items)
                             {
-                                bool deleted = e.Start == null;
+                                bool deleted = e.Start == null, allDay = !deleted && !string.IsNullOrEmpty(e.Start.Date);
                                 if(!deleted)
                                 {
                                     const DateTimeStyles Style = DateTimeStyles.NoCurrentDateDefault | DateTimeStyles.AssumeLocal;
@@ -117,14 +119,25 @@ namespace CalendarReminder
                                 bool ended = (e.End?.DateTime).HasValue && utcNow > e.End.DateTime.Value.ToUniversalTime();
                                 if(ended || deleted && listRequest.SyncToken == null) continue; // report deleted items if incremental
                                 int reminderMinutes = defaultMinutes[i];
-                                if(e.Reminders?.UseDefault == false)
+                                if(e.Reminders?.UseDefault == false) // if the event has a reminder override...
                                 {
-                                    reminderMinutes = e.Reminders.Overrides == null ? int.MaxValue :
-                                        e.Reminders.Overrides.Aggregate(
-                                            int.MaxValue, (min, o) => Math.Min(min, o.Minutes ?? defaultMinutes[i]));
+                                    reminderMinutes = e.Reminders.Overrides == null ? -1 : // use it
+                                        e.Reminders.Overrides.Where(o => o.Method == "popup").Aggregate(
+                                            -1, (min, o) => Math.Max(min, o.Minutes ?? reminderMinutes));
+                                    // we can't distinguish between all-day events in calendars with no default all-day event reminders
+                                    // and all-day events that override and remove the calendars' default all-day event reminder because
+                                    // in both cases they're represented as UseDefault == false and Overrides null/empty
+                                    if(reminderMinutes < 0 && allDay && defaultReminder >= 0) // so assume no calendar-level default
+                                    {
+                                        reminderMinutes = defaultReminder != 0 ? defaultReminder : 1440; // and use our own (1 day)
+                                    }
                                 }
-                                if(reminderMinutes == int.MaxValue && defaultReminder > 0) reminderMinutes = defaultReminder; // use default
-                                DateTime alarmAt = deleted || reminderMinutes == int.MaxValue ?
+                                else if(reminderMinutes < 0 && defaultReminder >= 0) // otherwise if we should use our default...
+                                {
+                                    reminderMinutes = defaultReminder != 0 ? defaultReminder : allDay ? 1440 : 30; // do so
+                                }
+
+                                DateTime alarmAt = deleted || reminderMinutes < 0 ?
                                     default : e.Start.DateTime.Value.ToUniversalTime().AddMinutes(-reminderMinutes);
                                 var alarm = new EventAlarm(alarmAt, e);
                                 if(!fullSync && eventMap.TryGetValue(e.Id, out int index)) // if we already have this event...

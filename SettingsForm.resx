@@ -120,7 +120,10 @@
   <metadata name="toolTip.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>17, 17</value>
   </metadata>
-  <metadata name="toolTip.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-    <value>17, 17</value>
-  </metadata>
+  <data name="chkDefaultTime.ToolTip" xml:space="preserve">
+    <value>If checked, the program will supply a default reminder for calendars without reminders configured. If unchecked, you must configure a Google Calendar reminder. Event-specific reminders are always respected.</value>
+  </data>
+  <data name="txtDefaultTime.ToolTip" xml:space="preserve">
+    <value>The number of minutes to use when reminding you about events in calendars that do not have a reminder configured, if "Default reminder time" is checked. If left blank (recommended), a value will be chosen for you.</value>
+  </data>
 </root>

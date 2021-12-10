@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SettingsForm));
             this.btnConnect = new System.Windows.Forms.Button();
             this.lstCalendars = new System.Windows.Forms.CheckedListBox();
             this.lblCalendars = new System.Windows.Forms.Label();
@@ -160,27 +161,24 @@
             // chkDefaultTime
             // 
             this.chkDefaultTime.AutoSize = true;
+            this.chkDefaultTime.Checked = true;
+            this.chkDefaultTime.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chkDefaultTime.Location = new System.Drawing.Point(12, 163);
             this.chkDefaultTime.Name = "chkDefaultTime";
             this.chkDefaultTime.Size = new System.Drawing.Size(125, 17);
             this.chkDefaultTime.TabIndex = 4;
             this.chkDefaultTime.Text = "&Default reminder time";
-            this.toolTip.SetToolTip(this.chkDefaultTime, "If unchecked, the program will only remind you about events that have reminders c" +
-        "onfigured in Google Calendar. If checked, the program will remind you about all " +
-        "events.");
+            this.toolTip.SetToolTip(this.chkDefaultTime, resources.GetString("chkDefaultTime.ToolTip"));
             this.chkDefaultTime.UseVisualStyleBackColor = true;
             this.chkDefaultTime.CheckedChanged += new System.EventHandler(this.chkOverrideTime_CheckedChanged);
             // 
             // txtDefaultTime
             // 
-            this.txtDefaultTime.Enabled = false;
             this.txtDefaultTime.Location = new System.Drawing.Point(139, 161);
             this.txtDefaultTime.Name = "txtDefaultTime";
             this.txtDefaultTime.Size = new System.Drawing.Size(42, 20);
             this.txtDefaultTime.TabIndex = 5;
-            this.txtDefaultTime.Text = "30";
-            this.toolTip.SetToolTip(this.txtDefaultTime, "The number of minutes to use when reminding you about events that do not have a r" +
-        "eminder configured in Google Calendar, if \"Default reminder time\" is checked");
+            this.toolTip.SetToolTip(this.txtDefaultTime, resources.GetString("txtDefaultTime.ToolTip"));
             // 
             // lblMinutes
             // 
@@ -190,6 +188,12 @@
             this.lblMinutes.Size = new System.Drawing.Size(43, 13);
             this.lblMinutes.TabIndex = 6;
             this.lblMinutes.Text = "minutes";
+            // 
+            // toolTip
+            // 
+            this.toolTip.AutoPopDelay = 10000;
+            this.toolTip.InitialDelay = 500;
+            this.toolTip.ReshowDelay = 100;
             // 
             // label1
             // 

@@ -29,11 +29,8 @@ namespace CalendarReminder
             Icon = Resources.AppIcon;
 
             int defaultReminder = Program.DataStore.Get<int>(Settings.DefaultReminder);
-            if(defaultReminder != 0)
-            {
-                chkDefaultTime.Checked = true;
-                txtDefaultTime.Text = defaultReminder.ToString();
-            }
+            if(defaultReminder < 0) chkDefaultTime.Checked = false;
+            else txtDefaultTime.Text = defaultReminder > 0 ? defaultReminder.ToString() : string.Empty;
 
             string soundFile = Program.DataStore.Get<string>(Settings.PlaySound);
             chkSound.Checked = soundFile != null;
@@ -145,20 +142,18 @@ namespace CalendarReminder
 
         void btnOK_Click(object sender, EventArgs e)
         {
-            int defaultReminder = 0;
-            if(chkDefaultTime.Checked)
+            int defaultReminder = chkDefaultTime.Checked ? 0 : -1;
+            if(chkDefaultTime.Checked && !string.IsNullOrWhiteSpace(txtDefaultTime.Text) &&
+               (!int.TryParse(txtDefaultTime.Text, out defaultReminder) || defaultReminder <= 0))
             {
-                if(!int.TryParse(txtDefaultTime.Text, out defaultReminder) || defaultReminder <= 0)
-                {
-                    ShowError($"\"{txtDefaultTime.Text}\" is not a valid reminder time. It must be a positive integer (e.g. 30).");
-                    txtDefaultTime.Focus();
-                    return;
-                }
+                ShowError($"\"{txtDefaultTime.Text}\" is not a valid reminder time. It must be a positive integer (e.g. 30).");
+                txtDefaultTime.Focus();
+                return;
             }
             if(defaultReminder == 0) Program.DataStore.Delete<int>(Settings.DefaultReminder);
             else Program.DataStore.Set(Settings.DefaultReminder, defaultReminder);
 
-            tempStore?.CopyTo(Program.DataStore);
+            tempStore?.CopyTo(Program.DataStore); // copy authentication settings, if any
             CalendarIds = lstCalendars.CheckedItems.Cast<CalendarListEntry>().Select(c => c.Id).ToArray();
             Program.DataStore.Set(Settings.CalendarIds, CalendarIds);
 
