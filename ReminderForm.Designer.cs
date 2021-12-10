@@ -183,8 +183,8 @@
             // toolTip
             // 
             this.toolTip.AutoPopDelay = 10000;
-            this.toolTip.InitialDelay = 100;
-            this.toolTip.ReshowDelay = 50;
+            this.toolTip.InitialDelay = 0;
+            this.toolTip.ReshowDelay = 0;
             // 
             // timer
             // 
@@ -199,7 +199,7 @@
             this.btnDismissAll.Name = "btnDismissAll";
             this.btnDismissAll.Size = new System.Drawing.Size(75, 23);
             this.btnDismissAll.TabIndex = 4;
-            this.btnDismissAll.Text = "Dismiss All";
+            this.btnDismissAll.Text = "Dismiss &All";
             this.btnDismissAll.UseVisualStyleBackColor = true;
             this.btnDismissAll.Click += new System.EventHandler(this.btnDismissAll_Click);
             // 

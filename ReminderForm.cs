@@ -33,9 +33,12 @@ namespace CalendarReminder
 
         public void ActivateAndShow(bool userShow, bool noSound = false)
         {
+            // if the window is invisible, update the suggested snooze time
+            if(!Visible || WindowState == FormWindowState.Minimized) SuggestSnoozeTime();
             if(Visible) Activate(); // TODO: if !userShow, don't steal input focus, or else don't accept keyboard input for a couple seconds after showing the form?
             else Show();
             if(WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
+
             cmbTimes.Focus(); // set the input focus to the snooze time box
             if(!startup && !userShow && !noSound && Program.DataStore.Get<string>(Settings.PlaySound) != null) // if we should play a sound...
             {
@@ -221,6 +224,7 @@ namespace CalendarReminder
             QueueInvoke(() => // if we were snoozing, correct the snooze timer
             {
                 if(snoozeUntil != default) SetSnoozeTime(snoozeUntil, true);
+                SuggestSnoozeTime(); // and suggest a new snooze time for the selected item
             });
         }
 
@@ -272,7 +276,7 @@ namespace CalendarReminder
             {
                 if(!dismissed.ContainsKey(a.Event.Id))
                 {
-                    if(a.AlarmAt > utcNow || a.Event.Start == null || !a.Event.Start.DateTime.HasValue) // if it shouldn't be shown...
+                    if(a.AlarmAt == default || a.AlarmAt > utcNow) // if it shouldn't be shown...
                     {
                         trackedEvents.Remove(a.Event.Id); // remove it from the list and reset any snooze
                     }
@@ -290,6 +294,7 @@ namespace CalendarReminder
             }
 
             string selectedId = GetSelectedEvent()?.Id;
+            reloadingList = true; // don't take certain actions on incidental selection change during list reload
             lstEvents.SuspendLayout();
             lstEvents.Items.Clear();
             string hash;
@@ -307,7 +312,7 @@ namespace CalendarReminder
                         selectedId = null;
                     }
 
-                    Utils.Hash(sha, te.Event.Start.DateTimeRaw);
+                    Utils.Hash(sha, te.Event.Start.DateTimeRaw ?? te.Event.Start.Date);
                     Utils.Hash(sha, te.AlarmAt);
                     Utils.Hash(sha, te.SnoozeUntil);
                 }
@@ -315,6 +320,7 @@ namespace CalendarReminder
                 hash = Convert.ToBase64String(sha.Hash);
             }
             lstEvents.ResumeLayout();
+            reloadingList = false;
 
             if(lstEvents.Items.Count != 0 && lstEvents.SelectedIndices.Count == 0) lstEvents.SelectedIndices.Add(0);
             if(hash != lastEventHash) // only activate the form or play a sound if the items have substantially changed
@@ -430,6 +436,17 @@ namespace CalendarReminder
             }
         }
 
+        void SuggestSnoozeTime()
+        {
+            Event ev = GetSelectedEvent();
+            if(ev != null)
+            {
+                int reminderMins = GetReminderMins(ev);
+                cmbTimes.SelectedIndex = Array.IndexOf(reminderTimes, reminderMins);
+                if(cmbTimes.SelectedIndex < 0) cmbTimes.Text = GetSnoozeDescription(reminderMins);
+            }
+        }
+
         void UserShowForm(bool unsnooze)
         {
             if(unsnooze)
@@ -506,12 +523,8 @@ namespace CalendarReminder
         void lstEvents_ItemMouseHover(object sender, ListViewItemMouseHoverEventArgs e)
         {
             Event ev = (Event)e.Item.Tag;
-            if(toolTip.Tag != ev)
-            {
-                toolTip.Hide(lstEvents);
-                toolTip.Tag = ev;
-            }
-            toolTip.Show(GetTooltip(ev), lstEvents); // TODO: this doesn't work reliably...
+            toolTip.SetToolTip(lstEvents, GetTooltip(ev));
+            toolTip.Hide(lstEvents); // if we don't hide it, it won't work reliably
         }
 
         void lstEvents_KeyPress(object sender, KeyPressEventArgs e)
@@ -526,12 +539,9 @@ namespace CalendarReminder
         void lstEvents_SelectedIndexChanged(object sender, EventArgs e)
         {
             miOpen.Enabled = cmbTimes.Enabled = btnDismiss.Enabled = btnSnooze.Enabled = IsEventSelected;
-            if(IsEventSelected)
+            if(!reloadingList && IsEventSelected)
             {
-                Event ev = GetSelectedEvent();
-                int reminderMins = GetReminderMins(ev);
-                cmbTimes.SelectedIndex = Array.IndexOf(reminderTimes, reminderMins);
-                if(cmbTimes.SelectedIndex < 0) cmbTimes.Text = GetSnoozeDescription(reminderMins);
+                SuggestSnoozeTime();
                 cmbTimes.Focus();
             }
         }
@@ -576,7 +586,7 @@ namespace CalendarReminder
         EventTracker tracker;
         Task trackerTask;
         DateTime snoozeUntil;
-        bool startup = true, quitting;
+        bool reloadingList, startup = true, quitting;
 
         static int GetReminderMins(Event e)
         {

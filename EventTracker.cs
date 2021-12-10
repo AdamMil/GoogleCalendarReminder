@@ -1,8 +1,9 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,7 +25,7 @@ namespace CalendarReminder
         public struct EventAlarm
         {
             public EventAlarm(DateTime at, Event e) => (AlarmAt, Event) = (at, e);
-            public override string ToString() => Event.Summary + " at " + Event.Start.DateTimeRaw;
+            public override string ToString() => Event.Summary + " at " + (Event.Start.DateTimeRaw ?? Event.Start.Date);
             public readonly DateTime AlarmAt;
             public readonly Event Event;
         }
@@ -99,7 +100,20 @@ namespace CalendarReminder
                             if(page.Items.Count != 0) maybeChanged = true;
                             foreach(Event e in page.Items)
                             {
-                                bool deleted = e.Start?.DateTime == null;
+                                bool deleted = e.Start == null;
+                                if(!deleted)
+                                {
+                                    const DateTimeStyles Style = DateTimeStyles.NoCurrentDateDefault | DateTimeStyles.AssumeLocal;
+                                    if(!e.Start.DateTime.HasValue) // if it's an all-day event, ensure the DateTime field is set
+                                    {
+                                        e.Start.DateTime = DateTime.ParseExact(e.Start.Date, "yyyy-MM-dd", CultureInfo.InvariantCulture, Style);
+                                    }
+                                    if(e.End != null && !string.IsNullOrEmpty(e.End.Date) && !e.End.DateTime.HasValue) // ditto for the End
+                                    {
+                                        e.End.DateTime = DateTime.ParseExact(e.End.Date, "yyyy-MM-dd", CultureInfo.InvariantCulture, Style);
+                                    }
+                                }
+
                                 bool ended = (e.End?.DateTime).HasValue && utcNow > e.End.DateTime.Value.ToUniversalTime();
                                 if(ended || deleted && listRequest.SyncToken == null) continue; // report deleted items if incremental
                                 int reminderMinutes = defaultMinutes[i];
@@ -110,20 +124,17 @@ namespace CalendarReminder
                                             int.MaxValue, (min, o) => Math.Min(min, o.Minutes ?? defaultMinutes[i]));
                                 }
                                 if(reminderMinutes == int.MaxValue && defaultReminder > 0) reminderMinutes = defaultReminder; // use default
-                                // in an incremental sync, we may receive updates for events that already ended (but were edited)
-                                if(deleted || reminderMinutes < int.MaxValue)
+                                DateTime alarmAt = deleted || reminderMinutes == int.MaxValue ?
+                                    default : e.Start.DateTime.Value.ToUniversalTime().AddMinutes(-reminderMinutes);
+                                var alarm = new EventAlarm(alarmAt, e);
+                                if(!fullSync && eventMap.TryGetValue(e.Id, out int index)) // if we already have this event...
                                 {
-                                    var alarm = new EventAlarm(
-                                        deleted ? default : e.Start.DateTime.Value.ToUniversalTime().AddMinutes(-reminderMinutes), e);
-                                    if(fullSync || !eventMap.TryGetValue(e.Id, out int index)) // if we don't have this event already...
-                                    {
-                                        eventMap[e.Id] = events.Count;
-                                        events.Add(alarm);
-                                    }
-                                    else // otherwise, we already have the event, so just update it
-                                    {
-                                        events[index] = alarm;
-                                    }
+                                    events[index] = alarm; // update it
+                                }
+                                else if(alarmAt != default) // otherwise, only add the event if it has a reminder
+                                {
+                                    eventMap[e.Id] = events.Count;
+                                    events.Add(alarm);
                                 }
                             }
                             if(page.NextPageToken == null)
@@ -143,9 +154,14 @@ namespace CalendarReminder
                         }
                         failed |= true;
                     }
-                    catch(Exception ex) when (HasException<System.Net.Sockets.SocketException>(ex))
+                    catch(Exception ex) when (HasException<System.Net.Sockets.SocketException>(ex) || ex is HttpRequestException)
                     {
                         Disconnected?.Invoke(this);
+                        failed |= true;
+                    }
+                    catch(Exception ex) when (!(ex is OperationCanceledException))
+                    {
+                        Error?.Invoke(this, $"An unknown error occurred. {ex.GetType().Name} - {ex.Message}");
                         failed |= true;
                     }
                 }
@@ -227,9 +243,10 @@ namespace CalendarReminder
             {
                 foreach(EventAlarm a in events.OrderBy(a => a.Event.Id, StringComparer.Ordinal))
                 {
+                    Utils.Hash(sha, a.AlarmAt);
                     Utils.Hash(sha, a.Event.Id);
-                    Utils.Hash(sha, a.Event.Start?.DateTimeRaw);
-                    Utils.Hash(sha, a.Event.End?.DateTimeRaw);
+                    Utils.Hash(sha, a.Event.Start != null ? a.Event.Start.DateTimeRaw ?? a.Event.Start.Date : null);
+                    Utils.Hash(sha, a.Event.End   != null ? a.Event.End.DateTimeRaw   ?? a.Event.End.Date   : null);
                     Utils.Hash(sha, a.Event.Summary);
                     Utils.Hash(sha, a.Event.HtmlLink);
                     Utils.Hash(sha, a.Event.Location);
