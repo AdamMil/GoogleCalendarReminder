@@ -7,8 +7,6 @@ using Google.Apis.Util.Store;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-// TODO: it seems like this sometimes loses data (especially the "play sound" setting). investigate
-
 namespace CalendarReminder
 {
     sealed class JsonDataStore : IDataStore
@@ -34,8 +32,8 @@ namespace CalendarReminder
 
         public Task ClearAsync()
         {
+            if(obj == null && dicts.Count == 0) return Task.CompletedTask;
             obj = null;
-            if(dicts.Count == 0) return Task.CompletedTask;
             dicts.Clear();
             return Save();
         }
@@ -96,7 +94,7 @@ namespace CalendarReminder
         {
             if(path != null)
             {
-                var o = new JObject();
+                JObject o = obj ?? new JObject();
                 foreach(KeyValuePair<Type, object> pair in dicts)
                 {
                     o[pair.Key.FullName] = JObject.FromObject(pair.Value, serializer);

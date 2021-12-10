@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -11,8 +12,6 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Google.Apis.Calendar.v3;
 using Google.Apis.Calendar.v3.Data;
-
-// TODO: extract links from the description HTML?
 
 namespace CalendarReminder
 {
@@ -26,6 +25,10 @@ namespace CalendarReminder
             SetDisconnected();
             foreach(int mins in reminderTimes) cmbTimes.Items.Add(GetSnoozeDescription(mins));
             Program.Resume += OnResume;
+
+            var attr = (AssemblyFileVersionAttribute)Assembly.GetExecutingAssembly()
+                .GetCustomAttributes(typeof(AssemblyFileVersionAttribute)).First();
+            Text = $"{Text} v{attr.Version.Substring(0, attr.Version.LastIndexOf('.'))}";
         }
 
         public void ActivateAndShow(bool userShow, bool noSound = false)
@@ -172,8 +175,12 @@ namespace CalendarReminder
             Invoke((Action)(() => SetTracker(new EventTracker(service, calendarIds))));
 
             // set 'startup' to false after 15 seconds so we'll start getting alarm sounds
-            await Task.Delay(15000, cts.Token).ConfigureAwait(false);
-            startup = false;
+            try
+            {
+                await Task.Delay(15000, cts.Token).ConfigureAwait(false);
+                startup = false;
+            }
+            catch(OperationCanceledException) { }
         }
 
         void DismissAll()
@@ -451,6 +458,49 @@ namespace CalendarReminder
 
         void btnSnooze_Click(object sender, EventArgs e) => Snooze();
 
+        void itemContextMenu_Opening(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            Event ev = GetSelectedEvent();
+            if(ev == null) // if there's no event...
+            {
+                e.Cancel = true; // don't show a menu
+            }
+            else // otherwise, there is an event
+            {
+                if(itemContextMenu.Items.Count > 1) // restore the menu to its original state
+                {
+                    itemContextMenu.Items.Clear();
+                    itemContextMenu.Items.Add(miOpen);
+                }
+                // then add custom menu items  TODO: extract links from the description HTML?
+                if(ev.ConferenceData?.EntryPoints != null)
+                {
+                    foreach(EntryPoint ep in ev.ConferenceData.EntryPoints)
+                    {
+                        if(string.IsNullOrEmpty(ep.Uri)) continue;
+                        Image image;
+                        string text, shortUri = ep.Uri;
+                        if(Uri.TryCreate(shortUri, UriKind.Absolute, out Uri uri))
+                        {
+                            shortUri = !string.IsNullOrEmpty(uri.Host) ? uri.Host : uri.AbsolutePath;
+                        }
+                        if(ep.EntryPointType == "video") (image, text) = (videoImg, $"Join Video ({shortUri})");
+                        else if(ep.EntryPointType == "phone") (image, text) = (phoneImg, $"Dial Phone ({shortUri})");
+                        else if(ep.EntryPointType == "sip") (image, text) = (sipImg, $"Join SIP Conference ({shortUri})");
+                        else if(ep.EntryPointType == "more") (image, text) = (conferenceImg, "Open Conference Info");
+                        else (image, text) = (conferenceImg, $"Open Unknown Conferencing ({ep.EntryPointType} - {shortUri})");
+                        itemContextMenu.Items.Add(text, image, (a, b) => OpenBrowser(ep.Uri));
+                    }
+                }
+                if(IsUrl(ev.Location))
+                {
+                    string text = "Open Location Link";
+                    if(Uri.TryCreate(ev.Location, UriKind.Absolute, out Uri uri)) text = $"{text} ({uri.Host})";
+                    itemContextMenu.Items.Add(text, locationImg, (a, b) => OpenBrowser(ev.Location));
+                }
+            }
+        }
+
         void lstEvents_DoubleClick(object sender, EventArgs e) => OpenSelectedItem();
 
         void lstEvents_ItemMouseHover(object sender, ListViewItemMouseHoverEventArgs e)
@@ -482,23 +532,11 @@ namespace CalendarReminder
                 int reminderMins = GetReminderMins(ev);
                 cmbTimes.SelectedIndex = Array.IndexOf(reminderTimes, reminderMins);
                 if(cmbTimes.SelectedIndex < 0) cmbTimes.Text = GetSnoozeDescription(reminderMins);
-                if(IsUrl(ev.Location)) miOpenLocation.Enabled = true;
                 cmbTimes.Focus();
-            }
-            else
-            {
-                miOpenLocation.Enabled = false;
             }
         }
 
         void miOpen_Click(object sender, EventArgs e) => OpenSelectedItem();
-
-        void miOpenLocation_Click(object sender, EventArgs e)
-        {
-            string location = GetSelectedEvent()?.Location;
-            if(IsUrl(location)) OpenBrowser(location);
-        }
-
         void miSettings_Click(object sender, EventArgs e) => ShowSettingsForm();
 
         void miQuit_Click(object sender, EventArgs e)
@@ -528,8 +566,10 @@ namespace CalendarReminder
         readonly System.Threading.Timer snoozeTimer;
         readonly Dictionary<string, TrackedEvent> trackedEvents = new Dictionary<string, TrackedEvent>();
         readonly Dictionary<string, DateTime> dismissed = new Dictionary<string, DateTime>();
-        // Resources.*Icon reloads the icon on every property access, but we only want to load the icons once
+        // Resources.* reloads the image on every property access, but we only want to load them once
         readonly Icon appIcon = Resources.AppIcon, disconnectedIcon = Resources.DisconnectedIcon, errorIcon = Resources.ErrorIcon;
+        readonly Bitmap conferenceImg = Resources.Conference, locationImg = Resources.Location, phoneImg = Resources.Phone;
+        readonly Bitmap sipImg = Resources.SIP, videoImg = Resources.Video;
         System.Media.SoundPlayer soundPlayer;
         CancellationTokenSource cts = new CancellationTokenSource();
         string lastEventHash;

@@ -34,7 +34,6 @@
             this.colTime = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.itemContextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.miOpen = new System.Windows.Forms.ToolStripMenuItem();
-            this.miOpenLocation = new System.Windows.Forms.ToolStripMenuItem();
             this.cmbTimes = new System.Windows.Forms.ComboBox();
             this.btnSnooze = new System.Windows.Forms.Button();
             this.btnDismiss = new System.Windows.Forms.Button();
@@ -89,28 +88,19 @@
             // itemContextMenu
             // 
             this.itemContextMenu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.miOpen,
-            this.miOpenLocation});
+            this.miOpen});
             this.itemContextMenu.Name = "itemContextMenu";
-            this.itemContextMenu.Size = new System.Drawing.Size(178, 48);
+            this.itemContextMenu.Size = new System.Drawing.Size(136, 26);
+            this.itemContextMenu.Opening += new System.ComponentModel.CancelEventHandler(this.itemContextMenu_Opening);
             // 
             // miOpen
             // 
             this.miOpen.Enabled = false;
             this.miOpen.Image = global::CalendarReminder.Resources.Event;
             this.miOpen.Name = "miOpen";
-            this.miOpen.Size = new System.Drawing.Size(177, 22);
+            this.miOpen.Size = new System.Drawing.Size(135, 22);
             this.miOpen.Text = "&Open Event";
             this.miOpen.Click += new System.EventHandler(this.miOpen_Click);
-            // 
-            // miOpenLocation
-            // 
-            this.miOpenLocation.Enabled = false;
-            this.miOpenLocation.Image = global::CalendarReminder.Resources.Location;
-            this.miOpenLocation.Name = "miOpenLocation";
-            this.miOpenLocation.Size = new System.Drawing.Size(177, 22);
-            this.miOpenLocation.Text = "Open &Location Link";
-            this.miOpenLocation.Click += new System.EventHandler(this.miOpenLocation_Click);
             // 
             // cmbTimes
             // 
@@ -162,12 +152,12 @@
             this.miSep,
             this.miQuit});
             this.appContextMenu.Name = "contextMenu";
-            this.appContextMenu.Size = new System.Drawing.Size(181, 98);
+            this.appContextMenu.Size = new System.Drawing.Size(117, 76);
             // 
             // miSettings
             // 
             this.miSettings.Name = "miSettings";
-            this.miSettings.Size = new System.Drawing.Size(180, 22);
+            this.miSettings.Size = new System.Drawing.Size(116, 22);
             this.miSettings.Text = "&Settings";
             this.miSettings.Click += new System.EventHandler(this.miSettings_Click);
             // 
@@ -175,18 +165,18 @@
             // 
             this.miShow.Enabled = false;
             this.miShow.Name = "miShow";
-            this.miShow.Size = new System.Drawing.Size(180, 22);
+            this.miShow.Size = new System.Drawing.Size(116, 22);
             this.miShow.Text = "Show";
             // 
             // miSep
             // 
             this.miSep.Name = "miSep";
-            this.miSep.Size = new System.Drawing.Size(177, 6);
+            this.miSep.Size = new System.Drawing.Size(113, 6);
             // 
             // miQuit
             // 
             this.miQuit.Name = "miQuit";
-            this.miQuit.Size = new System.Drawing.Size(180, 22);
+            this.miQuit.Size = new System.Drawing.Size(116, 22);
             this.miQuit.Text = "&Quit";
             this.miQuit.Click += new System.EventHandler(this.miQuit_Click);
             // 
@@ -227,7 +217,7 @@
             this.MinimumSize = new System.Drawing.Size(408, 286);
             this.Name = "ReminderForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Google Calendar Reminder v1.2.2";
+            this.Text = "Google Calendar Reminder";
             this.TopMost = true;
             this.itemContextMenu.ResumeLayout(false);
             this.appContextMenu.ResumeLayout(false);
@@ -252,7 +242,6 @@
         private System.Windows.Forms.Button btnDismissAll;
         private System.Windows.Forms.ContextMenuStrip itemContextMenu;
         private System.Windows.Forms.ToolStripMenuItem miOpen;
-        private System.Windows.Forms.ToolStripMenuItem miOpenLocation;
         private System.Windows.Forms.ToolStripMenuItem miShow;
         private System.Windows.Forms.ToolStripSeparator miSep;
     }
