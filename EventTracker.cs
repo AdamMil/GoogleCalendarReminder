@@ -59,14 +59,17 @@ namespace CalendarReminder
                 DateTime utcNow = DateTime.UtcNow;
                 int defaultReminder = Program.DataStore.Get<int>(Settings.DefaultReminder);
                 bool fullSync, failed = false;
-                lock(syncLock) fullSync = (utcNow - lastFullSync).Ticks >= TimeSpan.TicksPerHour;
-                bool maybeChanged = fullSync; // if we're doing a full sync, we can't know that nothing changed since last time
-                if(fullSync)
+                lock(syncLock)
                 {
-                    events.Clear();
-                    eventMap.Clear();
-                    lastFullSync = utcNow;
+                    fullSync = (utcNow - lastFullSync).Ticks >= TimeSpan.TicksPerHour;
+                    if(fullSync)
+                    {
+                        events.Clear();
+                        eventMap.Clear();
+                        lastFullSync = utcNow;
+                    }
                 }
+                bool maybeChanged = fullSync; // if we're doing a full sync, we can't know that nothing changed since last time
 
                 for(int i = 0; i < calendarIds.Length; i++)
                 {
@@ -161,10 +164,9 @@ namespace CalendarReminder
                     catch(Google.GoogleApiException ex)
                     {
                         if(ex.HttpStatusCode == HttpStatusCode.Gone && syncIds[i] != null) { syncIds[i] = null; goto retry; }
-                        if(ex.HttpStatusCode == HttpStatusCode.NotFound)
-                        {
-                            Error?.Invoke(this, $"Data not found for calendar {calendarIds[i]}. Check settings.");
-                        }
+                        Error?.Invoke(this, ex.HttpStatusCode == HttpStatusCode.NotFound ?
+                            $"Data not found for calendar {calendarIds[i]}. Check settings." :
+                            $"An HTTP {ex.HttpStatusCode.ToString()} error occurred.");
                         failed |= true;
                     }
                     catch(Exception ex) when (HasException<System.Net.Sockets.SocketException>(ex) || ex is HttpRequestException)
@@ -215,19 +217,26 @@ namespace CalendarReminder
             SetAlarmTimer(false); // and make sure the alarm timer is set correctly
         }
 
-        void OnTimer(object _) => Alarm?.Invoke(this);
+        void OnTimer(object _)
+        {
+            Alarm?.Invoke(this);
+            SetAlarmTimer(true, true); // set the alarm to trigger for the next event after this one
+        }
 
-        bool SetAlarmTimer(bool eventsChanged)
+        bool SetAlarmTimer(bool resetAlarm, bool ignorePastEvents = false)
         {
             lock(eventLock)
             {
-                if(calendarEvents.Count == 0)
+                IEnumerable<EventAlarm> events = calendarEvents;
+                DateTime utcNow = DateTime.UtcNow;
+                if(ignorePastEvents) events = events.Where(a => a.AlarmAt > utcNow);
+                if(!events.Any())
                 {
                     timer.Change(Timeout.Infinite, Timeout.Infinite);
                 }
-                else if(eventsChanged)
+                else if(resetAlarm)
                 {
-                    TimeSpan toFirst = calendarEvents.Min(a => a.AlarmAt) - DateTime.UtcNow;
+                    TimeSpan toFirst = events.Min(a => a.AlarmAt) - utcNow;
                     timer.Change((int)Math.Max(0, Math.Min(int.MaxValue, (long)toFirst.TotalMilliseconds)), Timeout.Infinite);
                     if(toFirst <= TimeSpan.Zero) return true;
                 }

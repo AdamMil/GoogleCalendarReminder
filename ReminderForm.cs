@@ -312,6 +312,7 @@ namespace CalendarReminder
                         selectedId = null;
                     }
 
+                    Utils.Hash(sha, te.Event.Id);
                     Utils.Hash(sha, te.Event.Start.DateTimeRaw ?? te.Event.Start.Date);
                     Utils.Hash(sha, te.AlarmAt);
                     Utils.Hash(sha, te.SnoozeUntil);
@@ -326,9 +327,9 @@ namespace CalendarReminder
             if(hash != lastEventHash) // only activate the form or play a sound if the items have substantially changed
             {
                 if(lstEvents.Items.Count != 0) ActivateAndShow(userTriggered, noSound);
-                OnItemCountChanged();
+                OnItemCountChanged(); // OnItemCountChanged will hide the form if there are no items
+                lastEventHash = hash;
             }
-            lastEventHash = hash;
             startup = false; // we're not in the initial startup anymore
 
             SetSnoozeTime(snoozeTil, true);
