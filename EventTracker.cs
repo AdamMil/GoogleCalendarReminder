@@ -189,11 +189,11 @@ namespace CalendarReminder
                     else lastHash = hash;
                 }
 
-                bool triggeringAlarm;
+                bool triggeringAlarm = false;
                 lock(eventLock)
                 {
                     calendarEvents = events;
-                    triggeringAlarm = SetAlarmTimer(maybeChanged);
+                    if(maybeChanged) triggeringAlarm = SetAlarmTimer(maybeChanged);
                 }
                 if(maybeChanged && !triggeringAlarm) EventsUpdated?.Invoke(this);
 
@@ -219,24 +219,25 @@ namespace CalendarReminder
 
         void OnTimer(object _)
         {
+            DateTime utcNow = DateTime.UtcNow; // get the time before invoking Alarm to ensure closely spaced alarms aren't missed
             Alarm?.Invoke(this);
-            SetAlarmTimer(true, true); // set the alarm to trigger for the next event after this one
+            SetAlarmTimer(true, utcNow); // set the alarm to trigger for the next event after this one
         }
 
-        bool SetAlarmTimer(bool resetAlarm, bool ignorePastEvents = false)
+        bool SetAlarmTimer(bool recomputeAlarmTime, DateTime alarmThreshold = default)
         {
             lock(eventLock)
             {
                 IEnumerable<EventAlarm> events = calendarEvents;
-                DateTime utcNow = DateTime.UtcNow;
-                if(ignorePastEvents) events = events.Where(a => a.AlarmAt > utcNow);
+                if(alarmThreshold != default) events = events.Where(a => a.AlarmAt > alarmThreshold);
                 if(!events.Any())
                 {
                     timer.Change(Timeout.Infinite, Timeout.Infinite);
                 }
-                else if(resetAlarm)
+                else
                 {
-                    TimeSpan toFirst = events.Min(a => a.AlarmAt) - utcNow;
+                    if(recomputeAlarmTime) nextAlarm = events.Min(a => a.AlarmAt);
+                    TimeSpan toFirst = nextAlarm - DateTime.UtcNow;
                     timer.Change((int)Math.Max(0, Math.Min(int.MaxValue, (long)toFirst.TotalMilliseconds)), Timeout.Infinite);
                     if(toFirst <= TimeSpan.Zero) return true;
                 }
@@ -248,7 +249,7 @@ namespace CalendarReminder
         readonly Timer timer;
         readonly object eventLock = new object(), syncLock = new object();
         List<EventAlarm> calendarEvents = new List<EventAlarm>();
-        DateTime lastFullSync;
+        DateTime lastFullSync, nextAlarm;
 
         static bool HasException<T>(Exception ex) where T : Exception
         {
