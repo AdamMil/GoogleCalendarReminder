@@ -4,8 +4,10 @@
 
     static class Settings
     {
+        public const int DefaultDisableMs = 750;
         public const string CalendarIds = "gcr.calendarIds";
         public const string DefaultReminder = "gcr.defaultReminder";
+        public const string DisableTime = "gcr.disableTime";
         public const string OnClose = "gcr.onClose";
         public const string PlaySound = "gcr.playSound";
     }

@@ -48,17 +48,20 @@ namespace CalendarReminder
 
         public async Task Run(CancellationToken cancelToken)
         {
+            await Task.Yield();
             int[] defaultMinutes = new int[calendarIds.Length];
             var events = new List<EventAlarm>(64);
             var eventMap = new Dictionary<string, int>(64);
             var lastMetaLoad = new DateTime[calendarIds.Length]; // when we last reloaded the metadata for each calendar
             var syncIds = new string[calendarIds.Length];
             string lastHash = null;
+            DateTime lastDisconnected = default;
+            Status status = Status.Disconnected;
             while(!cancelToken.IsCancellationRequested)
             {
                 DateTime utcNow = DateTime.UtcNow;
                 int defaultReminder = Program.DataStore.Get<int>(Settings.DefaultReminder);
-                bool fullSync, failed = false;
+                bool fullSync, disconnected = false, failed = false;
                 lock(syncLock)
                 {
                     fullSync = (utcNow - lastFullSync).Ticks >= TimeSpan.TicksPerHour;
@@ -167,21 +170,33 @@ namespace CalendarReminder
                         Error?.Invoke(this, ex.HttpStatusCode == HttpStatusCode.NotFound ?
                             $"Data not found for calendar {calendarIds[i]}. Check settings." :
                             $"An HTTP {ex.HttpStatusCode.ToString()} error occurred.");
-                        failed |= true;
+                        failed = true;
                     }
                     catch(Exception ex) when (HasException<System.Net.Sockets.SocketException>(ex) || ex is HttpRequestException)
                     {
-                        Disconnected?.Invoke(this);
-                        failed |= true;
+                        if(!disconnected && (utcNow - lastDisconnected).Ticks > TimeSpan.TicksPerMinute*20)
+                        {
+                            Disconnected?.Invoke(this);
+                            lastDisconnected = utcNow;
+                        }
+                        disconnected = true;
                     }
                     catch(Exception ex) when (!(ex is OperationCanceledException))
                     {
                         Error?.Invoke(this, $"An unknown error occurred. {ex.GetType().Name} - {ex.Message}");
-                        failed |= true;
+                        failed = true;
                     }
                 }
 
-                if(!failed) Connected?.Invoke(this);
+                if(disconnected) status = Status.Disconnected;
+                else if(failed) status = Status.Failed;
+                else if(status != Status.Connected)
+                {
+                    Connected?.Invoke(this);
+                    status = Status.Connected;
+                    lastDisconnected = default;
+                }
+
                 if(maybeChanged) // if something may have changed...
                 {
                     string hash = HashEvents(events); // we only want to trigger the alarm if there's something really new
@@ -189,13 +204,17 @@ namespace CalendarReminder
                     else lastHash = hash;
                 }
 
-                bool triggeringAlarm = false;
-                lock(eventLock)
+                if(maybeChanged)
                 {
-                    calendarEvents = events;
-                    if(maybeChanged) triggeringAlarm = SetAlarmTimer(maybeChanged);
+                    bool triggeringAlarm = false;
+                    lock(eventLock)
+                    {
+                        calendarEvents.Clear();
+                        calendarEvents.AddRange(events);
+                        triggeringAlarm = SetAlarmTimer(maybeChanged);
+                    }
+                    if(!triggeringAlarm) EventsUpdated?.Invoke(this);
                 }
-                if(maybeChanged && !triggeringAlarm) EventsUpdated?.Invoke(this);
 
                 await Task.Delay(TimeSpan.FromMinutes(1), cancelToken).ConfigureAwait(false);
             }
@@ -205,6 +224,8 @@ namespace CalendarReminder
         {
             lock(eventLock) return new List<EventAlarm>(calendarEvents);
         }
+
+        enum Status { Disconnected = 0, Failed, Connected }
 
         void DoFullSync()
         {
@@ -273,6 +294,8 @@ namespace CalendarReminder
                     Utils.Hash(sha, a.Event.Summary);
                     Utils.Hash(sha, a.Event.HtmlLink);
                     Utils.Hash(sha, a.Event.Location);
+                    Utils.Hash(sha,
+                        a.Event.ConferenceData != null ? a.Event.ConferenceData.Signature ?? a.Event.ConferenceData.ConferenceId : null);
                 }
                 sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
                 return Convert.ToBase64String(sha.Hash);

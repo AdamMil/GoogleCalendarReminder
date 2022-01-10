@@ -33,8 +33,19 @@ namespace CalendarReminder
 
         public void ActivateAndShow(bool userShow, bool noSound = false)
         {
-            // if the window is invisible, update the suggested snooze time
-            if(!Visible || WindowState == FormWindowState.Minimized) SuggestSnoozeTime();
+            // if the window is invisible, update the suggested snooze time and disable the form for a moment
+            if(!Visible || WindowState == FormWindowState.Minimized)
+            {
+                SuggestSnoozeTime();
+                int delayMs = Program.DataStore.Get<int>(Settings.DisableTime);
+                if(delayMs >= 0)
+                {
+                    enableTimer.Interval = delayMs != 0 ? delayMs : Settings.DefaultDisableMs;
+                    Enabled = false;
+                    enableTimer.Enabled = true;
+                }
+            }
+
             if(Visible) Activate(); // TODO: if !userShow, don't steal input focus, or else don't accept keyboard input for a couple seconds after showing the form?
             else Show();
             if(WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
@@ -404,6 +415,7 @@ namespace CalendarReminder
             catch(FormatException)
             {
                 ShowError($"Invalid snooze time: \"{cmbTimes.Text}\"", "Invalid snooze time");
+                if(cmbTimes.Text == string.Empty) SuggestSnoozeTime();
                 return;
             }
 
@@ -475,6 +487,17 @@ namespace CalendarReminder
         }
 
         void btnSnooze_Click(object sender, EventArgs e) => Snooze();
+
+        void enableTimer_Tick(object sender, EventArgs e)
+        {
+            enableTimer.Enabled = false;
+            Enabled = true;
+        }
+
+        void eventTimer_Tick(object sender, EventArgs e)
+        {
+            if(Visible) RefreshItems();
+        }
 
         void itemContextMenu_Opening(object sender, System.ComponentModel.CancelEventArgs e)
         {
@@ -567,11 +590,6 @@ namespace CalendarReminder
                 if(notifyIcon.Icon == errorIcon) ShowSettingsForm();
                 else UserShowForm(false);
             }
-        }
-
-        void timer_Tick(object sender, EventArgs e)
-        {
-            if(Visible) RefreshItems();
         }
 
         readonly System.Threading.Timer snoozeTimer;

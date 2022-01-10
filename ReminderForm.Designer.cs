@@ -44,8 +44,9 @@
             this.miSep = new System.Windows.Forms.ToolStripSeparator();
             this.miQuit = new System.Windows.Forms.ToolStripMenuItem();
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
-            this.timer = new System.Windows.Forms.Timer(this.components);
+            this.eventTimer = new System.Windows.Forms.Timer(this.components);
             this.btnDismissAll = new System.Windows.Forms.Button();
+            this.enableTimer = new System.Windows.Forms.Timer(this.components);
             this.itemContextMenu.SuspendLayout();
             this.appContextMenu.SuspendLayout();
             this.SuspendLayout();
@@ -186,11 +187,11 @@
             this.toolTip.InitialDelay = 0;
             this.toolTip.ReshowDelay = 0;
             // 
-            // timer
+            // eventTimer
             // 
-            this.timer.Enabled = true;
-            this.timer.Interval = 60000;
-            this.timer.Tick += new System.EventHandler(this.timer_Tick);
+            this.eventTimer.Enabled = true;
+            this.eventTimer.Interval = 60000;
+            this.eventTimer.Tick += new System.EventHandler(this.eventTimer_Tick);
             // 
             // btnDismissAll
             // 
@@ -202,6 +203,11 @@
             this.btnDismissAll.Text = "Dismiss &All";
             this.btnDismissAll.UseVisualStyleBackColor = true;
             this.btnDismissAll.Click += new System.EventHandler(this.btnDismissAll_Click);
+            // 
+            // enableTimer
+            // 
+            this.enableTimer.Interval = 500;
+            this.enableTimer.Tick += new System.EventHandler(this.enableTimer_Tick);
             // 
             // ReminderForm
             // 
@@ -238,11 +244,12 @@
         private System.Windows.Forms.ToolStripMenuItem miSettings;
         private System.Windows.Forms.ToolStripMenuItem miQuit;
         private System.Windows.Forms.ToolTip toolTip;
-        private System.Windows.Forms.Timer timer;
+        private System.Windows.Forms.Timer eventTimer;
         private System.Windows.Forms.Button btnDismissAll;
         private System.Windows.Forms.ContextMenuStrip itemContextMenu;
         private System.Windows.Forms.ToolStripMenuItem miOpen;
         private System.Windows.Forms.ToolStripMenuItem miShow;
         private System.Windows.Forms.ToolStripSeparator miSep;
+        private System.Windows.Forms.Timer enableTimer;
     }
 }

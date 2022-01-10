@@ -126,4 +126,7 @@
   <data name="txtDefaultTime.ToolTip" xml:space="preserve">
     <value>The number of minutes to use when reminding you about events in calendars that do not have a reminder configured, if "Default reminder time" is checked. If left blank (recommended), a value will be chosen for you.</value>
   </data>
+  <data name="txtDisableTime.ToolTip" xml:space="preserve">
+    <value>The number of minutes to use when reminding you about events in calendars that do not have a reminder configured, if "Default reminder time" is checked. If left blank (recommended), a value will be chosen for you.</value>
+  </data>
 </root>

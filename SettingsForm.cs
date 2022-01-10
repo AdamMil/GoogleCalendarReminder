@@ -32,6 +32,9 @@ namespace CalendarReminder
             if(defaultReminder < 0) chkDefaultTime.Checked = false;
             else txtDefaultTime.Text = defaultReminder > 0 ? defaultReminder.ToString() : string.Empty;
 
+            int delayTime = Program.DataStore.Get<int>(Settings.DisableTime);
+            if(delayTime >= 0) txtDisableTime.Text = (delayTime > 0 ? delayTime : Settings.DefaultDisableMs).ToString();
+
             string soundFile = Program.DataStore.Get<string>(Settings.PlaySound);
             chkSound.Checked = soundFile != null;
             int soundIndex = 0;
@@ -150,8 +153,20 @@ namespace CalendarReminder
                 txtDefaultTime.Focus();
                 return;
             }
+
+            int disableTime = 0;
+            if(!string.IsNullOrWhiteSpace(txtDisableTime.Text) &&
+               (!int.TryParse(txtDisableTime.Text, out disableTime) || disableTime < 0))
+            {
+                ShowError($"\"{txtDisableTime.Text}\" is not a valid delay time. It must be a non-negative integer (e.g. 500).");
+                txtDisableTime.Focus();
+                return;
+            }
+
             if(defaultReminder == 0) Program.DataStore.Delete<int>(Settings.DefaultReminder);
             else Program.DataStore.Set(Settings.DefaultReminder, defaultReminder);
+
+            Program.DataStore.Set(Settings.DisableTime, disableTime == 0 ? -1 : disableTime); // -1 means disabled. 0 is default
 
             tempStore?.CopyTo(Program.DataStore); // copy authentication settings, if any
             CalendarIds = lstCalendars.CheckedItems.Cast<CalendarListEntry>().Select(c => c.Id).ToArray();

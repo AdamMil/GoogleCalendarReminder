@@ -46,6 +46,9 @@
             this.toolTip = new System.Windows.Forms.ToolTip(this.components);
             this.label1 = new System.Windows.Forms.Label();
             this.cmbOnClose = new System.Windows.Forms.ComboBox();
+            this.lblDisableTime = new System.Windows.Forms.Label();
+            this.lblMs = new System.Windows.Forms.Label();
+            this.txtDisableTime = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
             // btnConnect
@@ -85,10 +88,10 @@
             // btnOK
             // 
             this.btnOK.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnOK.Location = new System.Drawing.Point(117, 272);
+            this.btnOK.Location = new System.Drawing.Point(117, 298);
             this.btnOK.Name = "btnOK";
             this.btnOK.Size = new System.Drawing.Size(75, 23);
-            this.btnOK.TabIndex = 13;
+            this.btnOK.TabIndex = 16;
             this.btnOK.Text = "&OK";
             this.btnOK.UseVisualStyleBackColor = true;
             this.btnOK.Click += new System.EventHandler(this.btnOK_Click);
@@ -97,10 +100,10 @@
             // 
             this.btnCancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnCancel.Location = new System.Drawing.Point(198, 272);
+            this.btnCancel.Location = new System.Drawing.Point(198, 298);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(75, 23);
-            this.btnCancel.TabIndex = 14;
+            this.btnCancel.TabIndex = 17;
             this.btnCancel.Text = "Cancel";
             this.btnCancel.UseVisualStyleBackColor = true;
             // 
@@ -218,13 +221,43 @@
             this.cmbOnClose.Size = new System.Drawing.Size(87, 21);
             this.cmbOnClose.TabIndex = 12;
             // 
+            // lblDisableTime
+            // 
+            this.lblDisableTime.AutoSize = true;
+            this.lblDisableTime.Location = new System.Drawing.Point(12, 271);
+            this.lblDisableTime.Name = "lblDisableTime";
+            this.lblDisableTime.Size = new System.Drawing.Size(83, 13);
+            this.lblDisableTime.TabIndex = 13;
+            this.lblDisableTime.Text = "Disable &input for";
+            this.lblDisableTime.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // lblMs
+            // 
+            this.lblMs.AutoSize = true;
+            this.lblMs.Location = new System.Drawing.Point(183, 271);
+            this.lblMs.Name = "lblMs";
+            this.lblMs.Size = new System.Drawing.Size(125, 13);
+            this.lblMs.TabIndex = 15;
+            this.lblMs.Text = "ms after showing window";
+            // 
+            // txtDisableTime
+            // 
+            this.txtDisableTime.Location = new System.Drawing.Point(139, 267);
+            this.txtDisableTime.Name = "txtDisableTime";
+            this.txtDisableTime.Size = new System.Drawing.Size(42, 20);
+            this.txtDisableTime.TabIndex = 14;
+            this.toolTip.SetToolTip(this.txtDisableTime, resources.GetString("txtDisableTime.ToolTip"));
+            // 
             // SettingsForm
             // 
             this.AcceptButton = this.btnOK;
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.btnCancel;
-            this.ClientSize = new System.Drawing.Size(392, 307);
+            this.ClientSize = new System.Drawing.Size(392, 333);
+            this.Controls.Add(this.lblMs);
+            this.Controls.Add(this.txtDisableTime);
+            this.Controls.Add(this.lblDisableTime);
             this.Controls.Add(this.cmbOnClose);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.lblMinutes);
@@ -265,5 +298,8 @@
         private System.Windows.Forms.Label lblMinutes;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.ComboBox cmbOnClose;
+        private System.Windows.Forms.Label lblDisableTime;
+        private System.Windows.Forms.Label lblMs;
+        private System.Windows.Forms.TextBox txtDisableTime;
     }
 }

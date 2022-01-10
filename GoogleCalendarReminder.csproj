@@ -82,6 +82,11 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Resources\*.ico" />
+    <None Include="Resources\*.png" />
+    <EmbeddedResource Include="Resources\*.wav" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="DataStoreExtensions.cs" />
     <Compile Include="EventTracker.cs" />
     <Compile Include="FormBase.cs">
@@ -119,6 +124,7 @@
     </EmbeddedResource>
     <EmbeddedResource Include="SettingsForm.resx">
       <DependentUpon>SettingsForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
     <None Include=".gitignore" />
     <None Include="packages.config" />
@@ -134,28 +140,6 @@
       <ProductName>.NET Framework 3.5 SP1</ProductName>
       <Install>false</Install>
     </BootstrapperPackage>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\AppIcon.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Properties\" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\ErrorIcon.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\alarm.wav" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\DisconnectedIcon.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Play.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Event.png" />
-    <None Include="Resources\Location.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
