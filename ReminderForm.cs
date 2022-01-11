@@ -37,16 +37,19 @@ namespace CalendarReminder
             if(!Visible || WindowState == FormWindowState.Minimized)
             {
                 SuggestSnoozeTime();
-                int delayMs = Program.DataStore.Get<int>(Settings.DisableTime);
-                if(delayMs >= 0)
+                if(!userShow)
                 {
-                    enableTimer.Interval = delayMs != 0 ? delayMs : Settings.DefaultDisableMs;
-                    Enabled = false;
-                    enableTimer.Enabled = true;
+                    int delayMs = Program.DataStore.Get<int>(Settings.DisableTime);
+                    if(delayMs >= 0)
+                    {
+                        enableTimer.Interval = delayMs != 0 ? delayMs : Settings.DefaultDisableMs;
+                        Enabled = false;
+                        enableTimer.Enabled = true;
+                    }
                 }
             }
 
-            if(Visible) Activate(); // TODO: if !userShow, don't steal input focus, or else don't accept keyboard input for a couple seconds after showing the form?
+            if(Visible) Activate();
             else Show();
             if(WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
 
@@ -492,6 +495,7 @@ namespace CalendarReminder
         {
             enableTimer.Enabled = false;
             Enabled = true;
+            cmbTimes.Focus();
         }
 
         void eventTimer_Tick(object sender, EventArgs e)
