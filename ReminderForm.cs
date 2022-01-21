@@ -54,7 +54,8 @@ namespace CalendarReminder
             if(WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
 
             cmbTimes.Focus(); // set the input focus to the snooze time box
-            if(!startup && !userShow && !noSound && Program.DataStore.Get<string>(Settings.PlaySound) != null) // if we should play a sound...
+            if(!startup && !userShow && !noSound && (uint)Environment.TickCount - lastPlay >= 60000 && // if we should play a sound...
+               Program.DataStore.Get<string>(Settings.PlaySound) != null)
             {
                 if(soundPlayer == null)
                 {
@@ -84,6 +85,7 @@ namespace CalendarReminder
                     }
                 }
                 soundPlayer.Play();
+                lastPlay = (uint)Environment.TickCount; // don't play sounds too often
             }
         }
 
@@ -233,14 +235,14 @@ namespace CalendarReminder
                 HideForm(); // and hide the form
             }
         }
-        void OnResume() // on resumption from sleep or a session lock...
-        {
-            QueueInvoke(() => // if we were snoozing, correct the snooze timer
+
+        void OnResume() => // on resumption from sleep or a session lock...
+            QueueInvoke(() =>
             {
-                if(snoozeUntil != default) SetSnoozeTime(snoozeUntil, true);
+                lastPlay = ~(uint)Environment.TickCount; // play sounds again
+                if(snoozeUntil != default) SetSnoozeTime(snoozeUntil, true); // if we were snoozing, correct the snooze timer
                 SuggestSnoozeTime(); // and suggest a new snooze time for the selected item
             });
-        }
 
         void OnSnoozed(object _)
         {
@@ -609,6 +611,7 @@ namespace CalendarReminder
         EventTracker tracker;
         Task trackerTask;
         DateTime snoozeUntil;
+        uint lastPlay = ~(uint)Environment.TickCount; // ensure the last play is very different from the current tick count
         bool reloadingList, startup = true, quitting;
 
         static int GetReminderMins(Event e)
